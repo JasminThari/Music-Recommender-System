@@ -65,7 +65,7 @@ Recommender System:
         * Exclude Songs the User Has Already Heard: Recommend songs they have not listened to.
      
 
-Approach 5: Association Rule Mining - Apriori Algorithm
+## Approach 5: Association Rule Mining - Apriori Algorithm
 - Association Rule Mining seeks to discover relationships between variables in large datasets. In a music recommender system, it can find patterns of songs frequently listened to together. The Apriori Algorithm is used to identify frequent itemsets and derive association rules.
 - Steps to implement:
     * Prepare Transaction Data
