@@ -41,8 +41,42 @@ Recommender System:
     - Recall: Number of Relevant Songs in Top K / Total number of relevant songs
     - F1: 2 * (precision * recall) / (precision+recall) 
 
+## Approach 3: Collaborative Filtering: User-Based Collaborative Filtering with or without Singular Value Decomposition (SVD)
+- Main idea: Collaborative Filtering relies on the principle that users with similar behavior (e.g., listening habits) will have similar preferences. In User-Based Collaborative Filtering, we focus on finding users who have similar tastes and recommend songs that these similar users have enjoyed but the target user hasn't listened to yet.
+- Steps to implement: 
+    * Create a User-Song Interaction Matrix (R): From user_df, construct a matrix where rows represent users, columns represent songs, and the entries represent the number of times a user has listened to a song.
+    * Compute Similarities Between Users: Calculate the similarity between users using metrics like Cosine Similarity.
+    * Find Similar Users and Recommend Songs:
+        * For each target user:
+        * Identify the top N similar users.
+        * Aggregate the songs listened to by these users.
+        * Recommend songs not yet listened to by the target user.
+    * Consider to use Singular Value Decomposition (SVD) which is a matrix factorization technique used to reduce the dimensionality of data, capturing the latent factors influencing user preferences. Applying SVD can enhance the collaborative filtering process by handling sparsity and uncovering hidden relationships in the data.
 
+## Approach 4: Content-Based Filtering
+- Main idea: Content-Based Filtering recommends items similar to those a user has liked in the past, based on item features. In our case, it utilizes the metadata from Song_df to find songs similar to the ones a user has already enjoyed.
+- Steps to implement: 
+    * Prepare Song Features: Extract relevant features from Song_df such as genre, artist, tempo, mood, etc.
+        * For categorical/textual data, use techniques like One-Hot Encoding or TF-IDF Vectorization.
+    * Create a Feature Matrix: Combine all features into a single feature matrix.
+    * Construct User Profiles: For each user, create a profile by aggregating the features of the songs they have listened to.
+    * Calculate Similarity Between User Profile and Songs: Use cosine similarity to compute how similar each song is to the user's profile.
+    * Filtering Out Already Listened Songs
+        * Exclude Songs the User Has Already Heard: Recommend songs they have not listened to.
+     
+
+Approach 5: Association Rule Mining - Apriori Algorithm
+- Association Rule Mining seeks to discover relationships between variables in large datasets. In a music recommender system, it can find patterns of songs frequently listened to together. The Apriori Algorithm is used to identify frequent itemsets and derive association rules.
+- Steps to implement:
+    * Prepare Transaction Data
+    * Create User Song Lists: Represent each user's listening history as a transaction.
+    * Apply the Apriori Algorithm
+    * Derive Rules from Frequent Itemsets
+    * Recommend Based on Association Rules:
+        * For a target user:
+        * Identify songs they have listened to.
+        * Find rules where the antecedent is a subset of these songs.
+        * Recommend songs in the consequent that the user hasn't heard yet.
  
-
 ## Final recommendation system: 
 - Ensemble of all outputs! 
