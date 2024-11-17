@@ -1,6 +1,30 @@
 import os
 import h5py
 import pandas as pd
+#%%
+import sqlite3
+
+# Replace 'your_database.db' with the path to your .db file
+conn = sqlite3.connect('Data/track_metadata.db')
+
+# Create a cursor object to execute SQL commands
+cursor = conn.cursor()
+
+# Execute a SQL query (modify the query according to your database schema)
+cursor.execute("SELECT * FROM songs")
+
+# Fetch all rows from the executed query
+rows = cursor.fetchall()
+
+# to dataframe
+df = pd.DataFrame(rows, columns=[x[0] for x in cursor.description])
+
+# Close the cursor and connection when done
+cursor.close()
+conn.close()
+#%%
+
+
 #%% Load the data
 base_dir = "Data/MillionSongSubset"
 
