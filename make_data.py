@@ -2,8 +2,7 @@ import os
 import h5py
 import pandas as pd
 
-
-class DataSetMaker:
+class MakeData:
     """
     A class to create and pre-process the datasets from HDF5 and other raw data files from Million Song Dataset (MSD).
     """
@@ -170,6 +169,10 @@ class DataSetMaker:
         new_trackIds_cd2c = df_genres_cd2c[~df_genres_cd2c['trackId'].isin(df_genres_cd1_updated['trackId'])]
         df_genres_merged = pd.concat([df_genres_cd1_updated, new_trackIds_cd2c], ignore_index=True)
         print("Merged genres from cd2c into the updated cd1.")
+        
+        # Remove minority_genre column and rename majority_genre to genre
+        df_genres_merged = df_genres_merged.drop(columns=['minority_genre'])
+        df_genres_merged = df_genres_merged.rename(columns={'majority_genre': 'genre'})
 
         self.df_genres_merged = df_genres_merged
         print("All genre DataFrames have been merged.")
@@ -179,7 +182,6 @@ class DataSetMaker:
         # merge with the merged_df
         self.merged_df = self.merged_df.merge(self.df_genres_merged, left_on='track_id', right_on='trackId', how='left')
         self.merged_df = self.merged_df.drop(columns=['trackId'])
-
 
     def save_merged_df(self):
         """
@@ -256,7 +258,7 @@ class DataSetMaker:
 
         print("All processing steps completed successfully.")
 
-class DataLoader:
+class LoadData:
     """
     A class to load and manage datasets related to songs and user interactions.
     """
