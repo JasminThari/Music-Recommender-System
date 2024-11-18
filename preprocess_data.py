@@ -62,19 +62,19 @@ class FeatureEngineer:
         df = pd.concat([df, one_hot_encoded], axis=1)
         return df
 
-    def calculate_artist_frequency(self, df: pd.DataFrame, artist_column: str = 'artist_name') -> pd.Series:
+    def calculate_frequency(self, df: pd.DataFrame, column: str) -> pd.Series:
         """
-        Calculates the frequency of each artist in the dataset.
+        Calculates the frequency of each category in the column in the dataset.
 
         Parameters:
             df (pd.DataFrame): The dataframe containing artist data.
-            artist_column (str): The column name for artist names.
+            column (str): The column name to calculate frequency for.
 
         Returns:
-            pd.Series: A series mapping artist names to their frequencies.
+            pd.Series: A series mapping the category to their frequencies.
         """
-        artist_freq = df[artist_column].value_counts()
-        return artist_freq
+        freq = df[column].value_counts()
+        return freq
 
     def hash_artist_features(self, df: pd.DataFrame, n_features, artist_column: str = 'artist_name') -> pd.DataFrame:
         """
@@ -127,6 +127,7 @@ class GeocoderService:
             else:
                 return [np.nan, np.nan]
         except Exception as e:
+            print(f"Error geocoding '{location}': {e}")
             return [np.nan, np.nan]
         finally:
             time.sleep(1)  
