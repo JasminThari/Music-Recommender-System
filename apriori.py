@@ -6,15 +6,19 @@ from mlxtend.frequent_patterns import apriori, association_rules
 l.basicConfig(level=l.DEBUG, format="%(message)s")
 
 # Load played_songs_cleaned into a dataframe
-def load_dataframe(filename):
-    file_path = Path(f"data/{filename}")
-
-    df = pd.read_csv(file_path)
-
-    l.debug(f"\033[94m{file_path} dataframe: \033[0m\n{df.head}")
-    l.info(f"\033[92mColumns: \033[0m\n{df.columns}\n")
+def load_dataframe():
+    played_songs_path = "data/played_songs_cleaned.csv.csv"
+    user_data_path = "data/user_data_cleaned.csv"
     
-    return df
+    dfs = []
+    dfs.append(pd.read_csv(Path(played_songs_path)))
+    dfs.append(pd.read_csv(Path(user_data_path)))
+
+    for df in dfs:
+        l.debug(f"\033[94mdataframe: \033[0m\n{df.head}")
+        l.info(f"\033[92mColumns: \033[0m\n{df.columns}\n")
+    
+    return dfs
 
 # Creates basckets for the Apriori algorithm
 def create_baskets(df):
@@ -38,6 +42,6 @@ def apply_apriori(b):
 
     return rules
 
-DF = load_dataframe("played_songs_cleaned.csv")
+DFS = load_dataframe()
 # BASCKETS = create_baskets(DF)
 # R = apply_apriori(B)
