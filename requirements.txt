@@ -1,3 +1,8 @@
 pandas
 h5py
 mlxtend
+joblib
+matplotlib
+numpy
+scikit-learn
+scipy
