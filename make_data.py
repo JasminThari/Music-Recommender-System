@@ -286,23 +286,24 @@ class LoadData:
     A class to load and manage datasets related to songs and user interactions.
     """
 
-    def load_song_data(self, data_path: str):
+    def load_csv_file(self, data_path: str):
         """
         Loads the data_path file .csv file into a pandas DataFrame.
         """
         if not os.path.exists(data_path):
             raise FileNotFoundError(f"{data_path} does not exist.")
-        df_songs = pd.read_csv(data_path)
-        return df_songs
+        df = pd.read_csv(data_path)
+        return df
     
-    def load_user_data(self, data_path: str):
+    def load_txt_file(self, data_path: str):
         """
         Loads the data_path file .csv file into a pandas DataFrame.
         """
-        df_user_data = pd.read_csv(
+        df = pd.read_csv(
             data_path,
             sep='\t',
             header=None,
-            names=['user_id', 'song_id', 'play_count']
+            names=['user_id', 'song_id', 'play_count'], 
+            engine='python'
         )
-        return df_user_data
+        return df
