@@ -1,7 +1,8 @@
 import pandas as pd
 import logging as l
+import seaborn as sns
+import matplotlib.pyplot as plt
 import random
-from pathlib import Path
 from mlxtend.frequent_patterns import apriori, association_rules
 
 l.basicConfig(level=l.DEBUG, format="%(message)s")
@@ -21,8 +22,6 @@ def create_transactions():
     # load data
     df = pd.read_csv(PATH_USER_DATA)
 
-    l.debug(f"{df.head}\n")
-
     #TODO handle memory better
     df = df[:100000] 
 
@@ -33,9 +32,52 @@ def create_transactions():
           .set_index('user_id')
         ).map(lambda x: 0 if x <= 0 else 1 if x >= 1 else x)
 
-    l.debug(f"{transactions.head}\n")
+    # Investigate data
+    exploratory_data_analysis(df, transactions)
+
+    # Visualize data
+    data_visualization(df)
 
     return transactions, df
+
+def exploratory_data_analysis(df, t):
+    blue = "\033[34m"
+    green = "\033[32m"
+    end = "\033[0m"
+
+    # Dataframe info
+    l.debug(f"{blue}Dataframe:{end}")
+    l.debug(f"{green}Head:\n{df.head}\n{end}")
+    l.debug(f"{green}Shape:\n{df.shape}\n{end}")
+    l.debug(f"{green}Info:\n{df.info}\n{end}")
+    l.debug(f"{green}Is null sum:\n{df.isnull().sum()}\n{end}")
+    l.debug(f"{green}Describe:\n{df.describe().T}\n{end}")
+
+    # Transactions info
+    l.debug("{blue}Transactons:{end}")
+    l.debug(f"{green}Head:\n{t.head}\n{end}")
+
+def data_visualization(df):
+    # Top 10 most listened to song ids
+    song_count = df.groupby("song_id")["play_count"].sum().nlargest(10)
+    song_count = song_count.reset_index()
+
+    plt.figure(figsize=(12, 8))
+
+    ax = sns.barplot(
+        data = song_count,
+        y = "song_id",
+        x = "play_count",
+        palette = "icefire")
+
+    for i in ax.containers:
+        ax.bar_label(i,)
+
+    ax.set_title("Top 10 most listened to song ids")
+    plt.xlabel("Total play count")
+    plt.ylabel("Song ids")
+    plt.tight_layout()
+    plt.show()
 
 def apply_apriori(b): 
     # Find frequent items
@@ -95,6 +137,6 @@ def recommend_songs(rules):
 
     return recommendations
 
-BASKETS, SONGS = create_transactions()
-RULES = apply_apriori(BASKETS)
-recommend_songs(RULES)
+# BASKETS, SONGS = create_transactions()
+# RULES = apply_apriori(BASKETS)
+# recommend_songs(RULES)
