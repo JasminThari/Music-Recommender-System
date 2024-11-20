@@ -137,52 +137,6 @@ class MakeData:
 
         self.merged_df = merged_df
         print("Metadata and analysis DataFrames merged and cleaned.")
-
-    # def process_genres(self):
-        
-        # """
-        # Processes genre classification files and merges them into a single DataFrame.
-        # """
-        # genre_dfs = []
-        # for genre_path in self.genres_paths:
-        #     df_genre = pd.read_csv(
-        #         genre_path,
-        #         sep="\t",
-        #         comment='#',
-        #         header=None,
-        #         names=["trackId", "majority_genre", "minority_genre"],
-        #         engine='python'
-        #     )
-        #     genre_dfs.append(df_genre)
-        #     print(f"Loaded genres from {genre_path}")
-
-        # # Merge genres by adding new trackIds from subsequent files
-        # df_genres_cd1 = genre_dfs[0]
-        # df_genres_cd2 = genre_dfs[1]
-        # df_genres_cd2c = genre_dfs[2]
-
-        # # Add new trackIds from cd2 to cd1
-        # new_trackIds_cd2 = df_genres_cd2[~df_genres_cd2['trackId'].isin(df_genres_cd1['trackId'])]
-        # df_genres_cd1_updated = pd.concat([df_genres_cd1, new_trackIds_cd2], ignore_index=True)
-        # print("Merged genres from cd2 into cd1.")
-
-        # # Add new trackIds from cd2c to the updated cd1
-        # new_trackIds_cd2c = df_genres_cd2c[~df_genres_cd2c['trackId'].isin(df_genres_cd1_updated['trackId'])]
-        # df_genres_merged = pd.concat([df_genres_cd1_updated, new_trackIds_cd2c], ignore_index=True)
-        # print("Merged genres from cd2c into the updated cd1.")
-        
-        # # Remove minority_genre column and rename majority_genre to genre
-        # df_genres_merged = df_genres_merged.drop(columns=['minority_genre'])
-        # df_genres_merged = df_genres_merged.rename(columns={'majority_genre': 'genre'})
-
-        # self.df_genres_merged = df_genres_merged
-        # print("All genre DataFrames have been merged.")
-        
-        # self.df_genres_merged = self.df_genres_merged.drop_duplicates(subset='trackId', keep='first')
-        
-        # # merge with the merged_df
-        # self.merged_df = self.merged_df.merge(self.df_genres_merged, left_on='track_id', right_on='trackId', how='left')
-        # self.merged_df = self.merged_df.drop(columns=['trackId'])
     
     def process_genres(self):
         

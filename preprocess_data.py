@@ -37,7 +37,7 @@ class DataCleaner:
         Returns:
             pd.DataFrame: Filtered dataframe with users meeting the criteria.
         """
-        merged_df = pd.merge(df_songs_subs[['song_id']], df_user, on='song_id', how='inner')
+        merged_df = pd.merge(df_songs_subs[['song_id']], df_user, on='song_id', how='left')
         user_subs_filtered = merged_df[merged_df.groupby('user_id')['user_id'].transform('count') > min_songs]
         return user_subs_filtered
 
