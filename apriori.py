@@ -18,7 +18,7 @@ LISTENED_FIXED_RATIO_PATH = "data/listened_songs_fixed_ratio.csv"
 MASKED_FIXED_SPLIT_PATH = "data/masked_songs_fixed_split.csv"
 MASKED_FIXED_RATIO_PATH = "data/masked_songs_fixed_ratio.csv"
 
-def create_transactions():
+def create_transactions(explore_data=False, visualize_data=False):
     # load data
     df = pd.read_csv(PATH_USER_DATA)
 
@@ -33,10 +33,12 @@ def create_transactions():
         ).map(lambda x: 0 if x <= 0 else 1 if x >= 1 else x)
 
     # Investigate data
-    exploratory_data_analysis(df, transactions)
+    if explore_data:
+        exploratory_data_analysis(df, transactions)
 
     # Visualize data
-    data_visualization(df)
+    if visualize_data:
+        data_visualization(df)
 
     return transactions, df
 
@@ -62,20 +64,43 @@ def data_visualization(df):
     song_count = df.groupby("song_id")["play_count"].sum().nlargest(10)
     song_count = song_count.reset_index()
 
+    simple_plot(
+        data = song_count,
+        x = "play_count",
+        y = "song_id",
+        title = "Top 10 most listened to song ids",
+        x_label = "Total play count",
+        y_label = "Song ids"
+    )
+
+    # Top 10 users that listen to most songs
+    user_count = df.groupby("user_id")["play_count"].sum().nlargest(10)
+    user_count = user_count.reset_index()
+
+    simple_plot(
+        data = user_count,
+        x = "play_count",
+        y = "user_id",
+        title = "Top 10 users that listen to most songs",
+        x_label = "Total play count",
+        y_label = "User ids"
+    )
+
+def simple_plot(data, y, x, title, x_label, y_label):
     plt.figure(figsize=(12, 8))
 
     ax = sns.barplot(
-        data = song_count,
-        y = "song_id",
-        x = "play_count",
+        data = data,
+        y = y,
+        x = x,
         palette = "icefire")
 
     for i in ax.containers:
         ax.bar_label(i,)
 
-    ax.set_title("Top 10 most listened to song ids")
-    plt.xlabel("Total play count")
-    plt.ylabel("Song ids")
+    ax.set_title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
     plt.tight_layout()
     plt.show()
 
