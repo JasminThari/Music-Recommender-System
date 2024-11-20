@@ -1,47 +1,100 @@
 import pandas as pd
 import logging as l
+import random
 from pathlib import Path
 from mlxtend.frequent_patterns import apriori, association_rules
 
 l.basicConfig(level=l.DEBUG, format="%(message)s")
 
-# Load played_songs_cleaned into a dataframe
-def load_dataframe():
-    played_songs_path = "data/played_songs_cleaned.csv.csv"
-    user_data_path = "data/user_data_cleaned.csv"
+PATH_USER_DATA = "data/user_data_cleaned.csv"
+
+PATH_TEST_DATA = "data/test_users.csv"
+PATH_TRAIN_DATA = "data/train_users.csv"
+
+LISTENED_FIXED_SPLIT_PATH = "data/listened_songs_fixed_split.csv"
+LISTENED_FIXED_RATIO_PATH = "data/listened_songs_fixed_ratio.csv"
+
+MASKED_FIXED_SPLIT_PATH = "data/masked_songs_fixed_split.csv"
+MASKED_FIXED_RATIO_PATH = "data/masked_songs_fixed_ratio.csv"
+
+def create_transactions():
+    # load data
+    df = pd.read_csv(PATH_USER_DATA)
+
+    l.debug(f"{df.head}\n")
+
+    #TODO handle memory better
+    df = df[:100000] 
+
+    # Create transactions & hot encode
+    transactions = (
+        df.groupby(['user_id', 'song_id'])['play_count'] 
+          .sum().unstack().reset_index().fillna(0) 
+          .set_index('user_id')
+        ).map(lambda x: 0 if x <= 0 else 1 if x >= 1 else x)
+
+    l.debug(f"{transactions.head}\n")
+
+    return transactions, df
+
+def apply_apriori(b): 
+    # Find frequent items
+    frequent_items = apriori(
+        df = b, 
+        min_support = 0.003, 
+        use_colnames = True
+    ) 
     
-    dfs = []
-    dfs.append(pd.read_csv(Path(played_songs_path)))
-    dfs.append(pd.read_csv(Path(user_data_path)))
+    l.debug(f"{frequent_items.head}\n")
 
-    for df in dfs:
-        l.debug(f"\033[94mdataframe: \033[0m\n{df.head}")
-        l.info(f"\033[92mColumns: \033[0m\n{df.columns}\n")
-    
-    return dfs
+    # Create rules
+    rules = association_rules(
+        df = frequent_items, 
+        metric = "lift", 
+        min_threshold = 0.8, 
+        num_itemsets = b.shape[0]
+    ).sort_values(
+        by = ['confidence', 'lift'], 
+        ascending = [False, False]
+    )
 
-# Creates basckets for the Apriori algorithm
-def create_baskets(df):
-    baskets = []
-
-    l.info(baskets[0].columns)
-
-    for b in baskets:
-        l.debug(f"Basket dataframe: \n{b.head}\n")
-
-    return baskets
-
-# Apply apriori algorithm to find frequent itemsets and association rules
-def apply_apriori(b):
-    frequent_itemsets = apriori(b, min_support=0.05, use_colnames=True)
-
-    rules = association_rules(frequent_itemsets, metric='lift', min_threshold=1.0, num_itemsets=len(b))
-
-    l.info(f"Frequent itemsets: \n{frequent_itemsets.head}\n")
-    l.info(f"Association rules: \n{rules.head}\n")
+    l.debug(f"{rules.head}\n")
 
     return rules
 
-DFS = load_dataframe()
-# BASCKETS = create_baskets(DF)
-# R = apply_apriori(B)
+def recommend_songs(rules):
+    # Load test and train data
+    test_data = pd.read_csv(LISTENED_FIXED_SPLIT_PATH)
+    train_data = pd.read_csv(MASKED_FIXED_SPLIT_PATH) #TODO?
+
+    # Pick a random user from the test data
+    user_id = random.choice(test_data['user_id'].unique())
+
+    # Get 10 random songs listened to by the user
+    user_songs = test_data[test_data['user_id'] == user_id]['song_id'].sample(n=10, random_state=42).tolist()
+
+    l.info(f"User: {user_id}, Initial Songs: {user_songs}")
+
+    # Recommend songs using association rules
+    recommendations = set()
+    for song in user_songs:
+        # Find rules where the test user's songs are in the antecedents
+        matching_rules = rules[rules['antecedents'].apply(lambda x: song in x)]
+
+        # Extract the consequents from the matching rules
+        for _, rule in matching_rules.iterrows():
+            recommendations.update(rule['consequents'])
+
+    # Remove songs the user already knows
+    recommendations = recommendations - set(user_songs)
+
+    # Select up to 10 recommendations
+    recommendations = list(recommendations)[:10]
+
+    l.info(f"Recommended Songs for User {user_id}: {recommendations}")
+
+    return recommendations
+
+BASKETS, SONGS = create_transactions()
+RULES = apply_apriori(BASKETS)
+recommend_songs(RULES)
