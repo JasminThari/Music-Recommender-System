@@ -44,12 +44,11 @@ del sparse_matrix
 print(f"Memory usage: {process.memory_info().rss / 1024 / 1024:.2f} MB")
 
 
-def from_number_to_support(number: int):
-    return number / sparse_df.shape[0]
+# with low memory to true this will be slow and also provides and error
+frequent_itemsets = fpgrowth(sparse_df, min_support=0.001, use_colnames=False, verbose=1,low_memory=True)
 
-# find the support of single items
-#support_one_item = sparse_df.sum() / sparse_df.shape[0]
-frequent_itemsets = apriori(sparse_df, min_support=0.001, use_colnames=False, verbose=1,low_memory=True)
+# with low memory to false we get memory error
+#frequent_itemsets = apriori(sparse_df, min_support=0.001, use_colnames=False, verbose=1,max_len=2)
 print("i made it")
 # save the frequent itemsets
 frequent_itemsets.to_csv("data/frequent_itemsets_n.csv", index=False)
