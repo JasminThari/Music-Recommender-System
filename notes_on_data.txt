@@ -1,0 +1,19 @@
+Alt data er nu opdateret i drive. I får lige en gennemgang her: 
+
+- “played_songs_cleaned”: Unikke sange per række med metadata. 
+- “user_data_cleaned”: Alle users med MINDST 20 interactions med sange i played_songs_cleaned. 
+- “train_user”: De users som indgår i train sættet. 
+- “test_user”: De users som vi skal lave anbefalinger til. 
+
+Så laver vi split på vores test_users, hvor vi inddeler vores test users i listened_songs og masked_songs, hvor vi har interactions mellem users og songs og masked_songs er dem vi prøver at ramme, men listened_songs kan bruges som input til vores system.  
+
+Jeg har så lavet det split på to måder:
+
+Fixed split: Vi har præcis 10 sange for hver test_user i masked songs
+
+Ratio split: Vi har 20 % af af user interactions i masked songs. 
+
+
+Jeg tænker at vi kan lave evaluering på begge og se hvad der giver bedst mening. 
+
+Ift. hvor mange K sange vi skal anbefale så tænker jeg at mellem 10-20 giver mening.

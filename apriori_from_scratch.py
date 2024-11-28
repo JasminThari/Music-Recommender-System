@@ -2,17 +2,42 @@ from scipy.sparse import csr_matrix, tril
 from scipy.special import comb
 import pandas as pd
 import numpy as np
-import itertools
-import sys
+import json
 import math
 
-PATH_USER_DATA = "data/user_data_cleaned.csv"
+
+def find_train_users(path_to_user_data: str, path_to_train_users: str):
+    # Read the data files
+    listened_songs_all_users = pd.read_csv(path_to_user_data)
+    train_users = pd.read_csv(path_to_train_users)["user_id"]
+
+    # Filter the dataframe to include only users in the training set
+    listened_songs_train_users = listened_songs_all_users[listened_songs_all_users["user_id"].isin(train_users)]
+
+    # Save the filtered dataframe
+    file_path = path_to_user_data.replace(".csv", "_train.csv") 
+    listened_songs_train_users.to_csv(file_path, index=False)
+
+    # Print the number of unique users
+    print(f"Number of unique users in the training set: {listened_songs_train_users['user_id'].nunique()}")
+
+    return file_path
+
+
+
 
 def create_sparse_transaction_matrix(path_to_user_data: str,use_subset=False) -> csr_matrix:
     """
     Create a transaction matrix from the dataframe
     The df should have the same structure as the user_data_cleaned.csv
     That is just three columns: song_id, user_id play_count
+    Input:
+    path_to_user_data: str, path to the user data
+    use_subset: bool, if True a subset of the data is used
+    Returns:
+    sparse_matrix: csr_matrix, the transaction matrix
+    user_id_mapping: dict, mapping from the integer codes to the original user ids
+    song_id_mapping: dict, mapping from the integer codes to the original song ids
     """
     df = pd.read_csv(path_to_user_data)
     print(f"Number of unique songs: {df['song_id'].nunique()}")
@@ -31,6 +56,10 @@ def create_sparse_transaction_matrix(path_to_user_data: str,use_subset=False) ->
     user_codes = df["user_id"].cat.codes
     song_codes = df["song_id"].cat.codes
 
+    # mapping from the integer codes to the original strings
+    user_id_mapping = dict(enumerate(df["user_id"].cat.categories))
+    song_id_mapping = dict(enumerate(df["song_id"].cat.categories))
+
     # Create a sparse matrix
     sparse_matrix = csr_matrix(
         (df["play_count"], (user_codes, song_codes)),
@@ -39,16 +68,19 @@ def create_sparse_transaction_matrix(path_to_user_data: str,use_subset=False) ->
     )
     print(f"Created sparse matrix wih shape: {sparse_matrix.shape}")
     print(f"Memory usage of sparse matrix: {sparse_matrix.data.nbytes / 1024:.2f} KB")
-    return sparse_matrix
+    return sparse_matrix , user_id_mapping, song_id_mapping
 
-def aprioni_algorithm(crs_matrix, min_support, max_k=2):
+def apriori_algorithm(crs_matrix, min_support, singleton_path="data/support_singletons.csv", pair_path="data/support_pairs.csv"):
     """
     This function implements the apriori algorithm from scratch
     It takes a sparse matrix and returns the frequent itemsets
     Input:
     crs_matrix: sparse matrix
     min_support: float, the percentage of transactions that the itemset should occur in etc. 0.01
-    max_k: int, the maximum size of the itemset    
+    singleton_path: str, path to the file where the singletons are saved
+    pair_path: str, path to the file where the pairs are saved
+    Returns:
+    Saves the singletons and pairs to file
     """
 
     # convert the support to a int threshold
@@ -70,7 +102,7 @@ def aprioni_algorithm(crs_matrix, min_support, max_k=2):
     print(f"Memory usage of the filtered matrix: {crs_matrix.data.nbytes / 1024:.2f} KB")
 
     # write the single items to file    
-    with open("data/single_items.csv", "w") as f:
+    with open(singleton_path, "w") as f:
         relevant_single_items = single_item_occurance[relevant_single_item_indices] / total_number_of_users
         for index, support in zip(relevant_single_item_indices, relevant_single_items):
             f.write(f"{index},{support}\n")
@@ -97,76 +129,80 @@ def aprioni_algorithm(crs_matrix, min_support, max_k=2):
     original_rows = [index_mapping[i] for i in filtered_rows]
     original_cols = [index_mapping[i] for i in filtered_cols]
     # write the pairs to file
-    with open("data/pairs.csv", "w") as f:
+    with open(pair_path, "w") as f:
         support_percentage = filtered_values / total_number_of_users
         for row, col, value in zip(original_rows, original_cols, support_percentage):
             f.write(f"{row},{col},{value}\n")
     print(f"Number of pairs above the threshold: {len(filtered_rows)}") 
 
-    #TODO implement the rest of the algorithm for k > 2
+    return 
 
+    # optional (implement for k > 2)
 
-
-
-
-def aprioni_algorithm_old(crs_matrix, min_support, k=1,max_k=2,first_call=True):
+def calc_confidence(song_id_mapping,   
+                    path_singleton_support="data/support_singletons.csv",
+                    path_pair_support="data/support_pairs.csv",
+                    path_output="data/confidence_dict.json"):
+    
     """
-    This function implements the apriori algorithm from scratch
-    It takes a sparse matrix and returns the frequent itemsets
+    Calculate the confidence of the pairs
     Input:
-    crs_matrix: sparse matrix
+    path_singleton_support: str, path to the file with the singleton support
+    path_pair_support: str, path to the file with the pair support
+    path_output: str, path to the output file
+    Returns:
+    None
     """
-    if first_call:
-        assert k == 1, "The first call should be with k=1"
+    # read the files
+    singletons = pd.read_csv(path_singleton_support, header=None, names=["item", "support"], index_col="item")
+    pairs = pd.read_csv(path_pair_support, header=None, names=["item1", "item2", "support"])
+
+    # Calculate confidence for each pair in both directions
+    pairs['confidence_item1_to_item2'] = pairs.apply(lambda row: row['support'] / singletons.loc[row['item1'], 'support'], axis=1)
+    pairs['confidence_item2_to_item1'] = pairs.apply(lambda row: row['support'] / singletons.loc[row['item2'], 'support'], axis=1)
+
+    # Create the nested dictionary
+    confidence_dict = {}
+
+    for _, row in pairs.iterrows():
+        item1, item2 = song_id_mapping[row['item1']], song_id_mapping[row['item2']]
+        conf1_to_2 = row['confidence_item1_to_item2']
+        conf2_to_1 = row['confidence_item2_to_item1']
+        
+        # Add item1 -> item2 confidence
+        if item1 not in confidence_dict:
+            confidence_dict[item1] = {}
+        confidence_dict[item1][item2] = conf1_to_2
+        
+        # Add item2 -> item1 confidence
+        if item2 not in confidence_dict:
+            confidence_dict[item2] = {}
+        confidence_dict[item2][item1] = conf2_to_1
+
+    # Save to JSON file
+    with open(path_output, "w") as json_file:
+        json.dump(confidence_dict, json_file, indent=4)
+
+    print(f"Confidence data saved to {path_output}")
+    return
+
+if __name__ == "__main__": 
+        
+    PATH_ALL_USER_DATA = "data/user_data_cleaned.csv"
+    PATH_TRAIN_USERS = "data/train_users.csv"
+
+    PATH_TRAIN_USER_DATA = find_train_users(PATH_ALL_USER_DATA, PATH_TRAIN_USERS)
+
+    sparse_matrix, user_id_mapping, song_id_mapping = create_sparse_transaction_matrix(PATH_TRAIN_USER_DATA, use_subset=False)
+        
+    apriori_algorithm(sparse_matrix, 
+                        min_support=0.0005)
+
+    calc_confidence(song_id_mapping)
     
-    if k > max_k:
-        print("Reached the maximum k")
-        return
     
-    print(f"Starting calculation for k={k}")    
-    # consider only items that have not been pruned in the previous step
-    none_zero_columns = crs_matrix.sum(axis=0,dtype=np.int32).nonzero()[1].astype(np.int32)
-    print(f"Number of items considered: {len(none_zero_columns)}")
-
-    # create the itemsets of k size 
-    # will be VERY memory intensive if the number of items is to large
-    print(f"Total number of combinations: {comb(len(none_zero_columns),k)}")
-
-    # calculate the memory usage int32     
-
-    print(f"Memory usage of the itemsets (Without list overhead): {comb(len(none_zero_columns),k) * k * 4 / 1024:.2f} KB")
     
-    item_sets = list(itertools.combinations(none_zero_columns, k))
-    print(f"Memory usage of the itemsets (With list overhead): {sys.getsizeof(item_sets) / 1024:.2f} KB")  
-    
-    if k == 1:
-        # find the support of single items
-        item_sets_support = crs_matrix.sum(axis=0)/crs_matrix.shape[0]
-        # zip the itemsets and the support
-        zipped = zip(item_sets, item_sets_support)    
-    
-    else:
-        # now only consider transactions
-        pass
 
-    #write zipped to file
-    print("Writing to file")
-    with open(f"data/support_k_{k}.csv", "w") as f:
-        for itemset, support in zipped:
-            f.write(f"{itemset},{support}\n")
-
-    print("Done writing to file")
-    
-    k += 1
-    aprioni_algorithm_old(crs_matrix, min_support, k=k, max_k=max_k, first_call=False)
-
-
-
-if __name__ == "__main__":
-    sparse_matrix = create_sparse_transaction_matrix(PATH_USER_DATA, use_subset=False)
-    aprioni_algorithm(sparse_matrix, 
-                        min_support=0.001,
-                        max_k=1)
                       
 
 
