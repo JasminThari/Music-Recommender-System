@@ -5,6 +5,8 @@ import numpy as np
 import json
 import math
 from tqdm import tqdm
+from itertools import combinations
+from collections import defaultdict
 
 
 def find_train_users(path_to_user_data: str, path_to_train_users: str):
@@ -107,8 +109,8 @@ def apriori_algorithm(crs_matrix_initial, min_support, max_k=2, write_to_file=Tr
             with open(OUT_PATH, "w") as f:
                 relevant_single_items_support = single_item_occurance[relevant_single_item_indices] / TOTAL_NUMBER_OF_USERS
                 for index, support in zip(relevant_single_item_indices, relevant_single_items_support):
-                    f.write(f"{frozenset([index])},{support}\n")
-
+                    f.write(f"{(index,)},{support}\n")
+                
         filtered_csr_idx_to_org_item_idx = {new_index: old_index for new_index, old_index in enumerate(relevant_single_item_indices)}
         filtered_crs_matrix = crs_matrix[:,relevant_single_item_indices]
 
@@ -143,12 +145,11 @@ def apriori_algorithm(crs_matrix_initial, min_support, max_k=2, write_to_file=Tr
         accepted_candidates  = {}
         item_set_to_index = {}
         for index, (row, col, value) in enumerate(zip(filtered_rows, filtered_cols, filtered_values)):
-            item_set = frozenset((row, col))
+            item_set = tuple(sorted((row, col)))            
             
             item_set_to_index[item_set] = index           
 
             assert item_set not in accepted_candidates, f"Key {item_set} is already in the dictionary, should not happen"
-            assert frozenset((col, row)) not in accepted_candidates, f"An entry with the reversed order is already in the dictionary, should not happen"
             accepted_candidates[item_set] = value
 
         if WRITE_TO_FILE:
@@ -156,7 +157,7 @@ def apriori_algorithm(crs_matrix_initial, min_support, max_k=2, write_to_file=Tr
                 for itemset in accepted_candidates:
                     orginal_item_indices = [filtered_csr_idx_to_org_item_idx[i] for i in itemset]                    
                     support = accepted_candidates[itemset] / TOTAL_NUMBER_OF_USERS
-                    f.write(f"{frozenset(orginal_item_indices)},{support}\n")
+                    f.write(f"{tuple(sorted(orginal_item_indices))},{support}\n")
 
         #return bitwise_and_matrix, item_set_to_index, accepted_candidates
         return accepted_candidates
@@ -168,38 +169,50 @@ def apriori_algorithm(crs_matrix_initial, min_support, max_k=2, write_to_file=Tr
         crs_matrix: sparse matrix
         previous_accepted_candidates: dict, the previous accepted candidates
         k: int, the size of the itemsets to be created"""
-        # list all the prevoius accepted candidates
-        previous_accepted_candidates_list = list(previous_accepted_candidates.keys())
+
+        # Extract keys as sorted tuples for efficient comparison
+        prev_candidates = {tuple(sorted(c)): support for c, support in previous_accepted_candidates.items()}
 
         accepted_candidates = {}
-        # this might be slow, but hopefully we pruned and do prune a lot of the candidates
-        for i in tqdm(range(len(previous_accepted_candidates_list)), desc="Outer loop"):
-            for j in range(i+1, len(previous_accepted_candidates_list)):
-                # get the two sets
-                set1 = previous_accepted_candidates_list[i]
-                set2 = previous_accepted_candidates_list[j]
-                # check if the first k-1 elements are the same
-                if len(set1.intersection(set2)) == k-2:
-                    k_minus_1_set = set1.symmetric_difference(set2)                    
-                    # check if the k-1 set is in the previous accepted candidates 
-                    # thus also above the threshold
-                    if k_minus_1_set in previous_accepted_candidates:
-                        new_candidate_set = set1.union(set2)
-                        new_candidate_set_list = list(new_candidate_set)
-                        column = crs_matrix[:, new_candidate_set_list[0]]
-                        for item in new_candidate_set_list[1:]:
+
+        # Group previous itemsets by the first k-1 elements
+        group_by_prefix = defaultdict(list)
+        
+        for candidate in prev_candidates:
+            # Create the first k-1 elements as the key for grouping
+            prefix = tuple(candidate[:k-2])
+            group_by_prefix[prefix].append(candidate)
+
+        for group in tqdm(group_by_prefix.values(), desc="Generating candidates"):
+            for set1, set2 in combinations(group, 2):
+                # Check if the first k-2 elements match by intersecting sets
+                if set1[:-1] == set2[:-1]: # redudant since we already grouped by the first k-2 elements
+                    new_candidate_set = tuple(sorted(set(set1).union(set2)))
+
+                    # Prune based on k-1 subset
+                    k_minus_1_subsets = list(combinations(new_candidate_set, k - 1))
+                    if all(subset in prev_candidates for subset in k_minus_1_subsets):
+                        # Compute the support for new candidate set
+                        column = crs_matrix[:, new_candidate_set[0]]
+                        for item in new_candidate_set[1:]:
                             column = column.multiply(crs_matrix[:, item])
+
                         support = column.sum() / TOTAL_NUMBER_OF_USERS
                         if support >= SUPPORT_THRESHOLD:
                             accepted_candidates[new_candidate_set] = support
 
+                        if WRITE_TO_FILE:
+                            with open(OUT_PATH, "a") as f:
+                                orginal_item_indices = [filtered_csr_idx_to_org_item_idx[i] for i in new_candidate_set]                    
+                                f.write(f"{tuple(sorted(orginal_item_indices))},{support}\n")
+        """
         if WRITE_TO_FILE:
             with open(OUT_PATH, "a") as f:
                 for itemset in accepted_candidates:
                     orginal_item_indices = [filtered_csr_idx_to_org_item_idx[i] for i in itemset]                    
                     support = accepted_candidates[itemset] / TOTAL_NUMBER_OF_USERS
-                    f.write(f"{frozenset(orginal_item_indices)},{support}\n")
-
+                    f.write(f"{tuple(sorted(orginal_item_indices))},{support}\n")
+        """
         return accepted_candidates
 
 
@@ -270,7 +283,7 @@ if __name__ == "__main__":
 
     sparse_matrix, user_id_mapping, song_id_mapping = create_sparse_transaction_matrix(PATH_TRAIN_USER_DATA, use_subset=False)
         
-    apriori_algorithm(sparse_matrix, 0.001, write_to_file=True, max_k=3)
+    apriori_algorithm(sparse_matrix, 0.003, write_to_file=True, max_k=6)
     
     
     
