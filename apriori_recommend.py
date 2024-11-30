@@ -1,6 +1,7 @@
 from itertools import combinations
 import json
 import csv
+import temp
 import pandas as pd
 
 def find_top_songs_single(sorted_c_scores: dict, k_songs: set, limit: int=10) -> list:
@@ -94,15 +95,14 @@ def save_recommendations_to_csv(recommendations: list, output_path: str):
     with open(output_path, mode="w", newline="", encoding="utf-8") as csvfile:
         writer = csv.writer(csvfile)
         # Write the header
-        writer.writerow(["UserId", "Recommendations", "Score"])
+        writer.writerow(["user_id", "recommended_songs", "c_score"])
         
         # Write the recommendations
         for user_id, user_recs in recommendations:
             songs, scores = [], []
-            try:
-                songs, scores = zip(*user_recs)
-            except ValueError:
-                pass
+            for song, score in user_recs:
+                songs.append(song)
+                scores.append(score)
             writer.writerow([user_id, songs, scores])
 
 def recommend_songs(c_score_path: str):
@@ -157,8 +157,19 @@ def recommend_songs(c_score_path: str):
     )
     print("  3/3 ratio 50 completed.")
 
-recommend_songs("data/confidence_dict_0.001.json")
-recommend_songs("data/confidence_dict_0.0005.json")
+# recommend_songs("data/confidence_dict_0.001.json")
+# recommend_songs("data/confidence_dict_0.0005.json")
+
+recs_df = pd.read_csv("data/apriori_ratio50_recommendations_c0.0005.csv")
+mask_df = pd.read_csv("data/masked_songs_ratio_split.csv")
+
+k = 50
+evaluation_df = temp.evaluate_recommendations(recs_df, mask_df, k)
+
+mean_precision_at_k = evaluation_df['precision_at_k'].mean()
+mean_recall_at_k = evaluation_df['recall_at_k'].dropna().mean() 
+print(f"Mean Precision@{k}: {mean_precision_at_k:.4f}")
+print(f"Mean Recall@{k}: {mean_recall_at_k:.4f}")
 
 # Example data 1
 # sorted_c_scores = {
