@@ -45,39 +45,34 @@ def plot_pca_variance(pca):
     plt.show()
 
 def plot_cluster_evaluation(scores: dict, num_clusters):
-    wcss, silhouette_scores, davies_bouldin_indices = scores["wcss"], scores["silhouette_scores"], scores["davies_bouldin_indices"]
+    silhouette_scores = scores["silhouette_scores"]
+    davies_bouldin_indices = scores["davies_bouldin_indices"]
 
     sns.set_theme(style="whitegrid")
-    colors = sns.color_palette("icefire", n_colors=3)
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6))
+    colors = sns.color_palette("icefire", n_colors=2)
+    fig, ax = plt.subplots(figsize=(10, 6))
 
-    # Elbow Method plot with discrete x-axis
-    sns.lineplot(x=range(1, num_clusters+1), y=wcss, marker='o', ax=ax1, color=colors[0])
-    ax1.set_xticks(range(1, num_clusters+1))  # Ensure x-axis has all numbers as discrete values
-    ax1.set_title('Elbow Method', fontsize=16)
-    ax1.set_xlabel('Number of clusters', fontsize=14)
-    ax1.set_ylabel('WCSS', fontsize=14)
+    # Silhouette Score plot
+    sns.lineplot(x=range(2, num_clusters + 1), y=silhouette_scores, marker='o', color=colors[0], ax=ax, label='Silhouette Score')
+    ax.set_xticks(range(2, num_clusters + 1))  # Ensure x-axis uses integers
+    ax.set_title('Evaluation of Clustering Performance', fontsize=16)
+    ax.set_xlabel('Number of clusters', fontsize=14)
+    ax.set_ylabel('Silhouette Score', fontsize=14)
 
-    # Silhouette Score plot on the second subplot
-    sns.lineplot(x=range(2, num_clusters+1), y=silhouette_scores, marker='o', color=colors[1], ax=ax2, label='Silhouette Score')
-    ax2.set_xticks(range(2, num_clusters+1))  # Ensure x-axis uses integers
-    ax2.set_title('Evaluation of Clustering Performance', fontsize=16)
-    ax2.set_xlabel('Number of clusters', fontsize=14)
-    ax2.set_ylabel('Silhouette Score', fontsize=14)
-    ax2.tick_params(axis='y')
-
-    # Twin axis for Davies-Bouldin Index, with no grid
-    ax2_twin = ax2.twinx()
-    sns.lineplot(x=range(2, num_clusters+1), y=davies_bouldin_indices, marker='s', color=colors[2], ax=ax2_twin, label='Davies-Bouldin Index')
-    ax2_twin.set_ylabel('Davies-Bouldin Index', fontsize=14)
-    ax2_twin.tick_params(axis='y')
-    ax2_twin.grid(False)  # Turn off grid for twin axis to reduce clutter
+    # Twin axis for Davies-Bouldin Index
+    ax_twin = ax.twinx()
+    sns.lineplot(x=range(2, num_clusters + 1), y=davies_bouldin_indices, marker='s', color=colors[1], ax=ax_twin, label='Davies-Bouldin Index')
+    ax_twin.set_ylabel('Davies-Bouldin Index', fontsize=14)
+    ax_twin.tick_params(axis='y')
+    ax_twin.grid(False)  # Turn off grid for twin axis to reduce clutter
 
     # Add legends
-    ax2.legend(loc='upper left')
-    ax2_twin.legend(loc='upper right')
+    ax.legend(loc='upper left')
+    ax_twin.legend(loc='upper right')
+
     fig.tight_layout()
     plt.show()
+
 
 def plot_cluster_distribution(df_pca):
     cluster_counts = df_pca['cluster'].value_counts().sort_index()
