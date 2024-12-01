@@ -7,4 +7,4 @@ Then run create_data.ipynb to create the data for the project.
 all_songs.csv are all the songs in the dataset. \
 played_songs.csv only consist of songs that have been played by at least one user. \
 
-    - F1: 2 * (precision * recall) / (precision+recall) 
+
