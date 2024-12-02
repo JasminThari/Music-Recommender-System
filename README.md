@@ -9,6 +9,10 @@
 2. **Unpack the Data:**
    - Unzip the files within the `data/raw` directory.
 
+3. **Visualization_functions.py:**
+   - This file contains the functions used for visualization. It is located in the `root` directory.
+   - Be sure to have this file in the same directory as the notebook.
+
 **Note:** Many parts of the code are computationally intensive, and some model training steps require a GPU. To simplify execution, we have provided preprocessed data in the `data/processed` folder. This allows you to skip the data preprocessing steps and run the notebook directly.
 
 Additionally, we have saved the trained Autoencoder model and the compressed latent space in the `models` directory.
