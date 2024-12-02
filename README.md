@@ -3,7 +3,7 @@
 ## How to Run the Notebook
 
 1. **Download the Data:**
-   - Obtain the dataset from [this link](https://drive.google.com/file/d/1kuEDAC_oX9hkf_a7zpBgMg_hXa6caiGO/view?usp=sharing).
+   - Obtain the dataset from [this link](https://drive.google.com/drive/folders/1CCxpRPAHrz0t0INvGaSrpf7OLOg6fE0D?usp=sharing).
    - Place the downloaded data into the `data/raw` directory at the root of the project.
 
 2. **Unpack the Data:**
